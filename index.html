@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ranking de Elevadores — Thopp Elevadores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --thopp: #2DB5A0;
+    --thopp-dark: #229685;
+    --thopp-light: #E6F6F3;
+    --navy: #1A2333;
+    --navy-soft: #2F3A4D;
+    --bg: #F5F7FA;
+    --card: #FFFFFF;
+    --border: #E5E9F0;
+    --muted: #6B7584;
+    --gold: #F59E0B;
+    --danger: #DC2626;
+    --warn: #D97706;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--navy); font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.5; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1A2333 0%, #0F1826 100%);
+    color: #fff;
+    padding: 2.5rem 1rem 6rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    bottom: -60px;
+    left: 0; right: 0;
+    height: 120px;
+    background: var(--bg);
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  }
+  .hero-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+  .brand {
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+  .brand img {
+    height: 56px;
+    width: auto;
+    display: block;
+  }
+  .brand-tag {
+    font-size: 0.7rem; font-weight: 600;
+    color: #93A6B8; letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid rgba(147, 166, 184, 0.3);
+    border-radius: 999px;
+  }
+  h1 {
+    font-size: clamp(1.6rem, 3.5vw, 2.3rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+  }
+  h1 em {
+    color: var(--thopp);
+    font-style: normal;
+  }
+  .sub {
+    color: #B8C5D2;
+    font-size: 0.95rem;
+    max-width: 60ch;
+  }
+
+  /* Container */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 1rem 3rem; }
+  .content { margin-top: -4rem; position: relative; z-index: 2; }
+
+  /* Toolbar */
+  .toolbar {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    box-shadow: 0 10px 40px rgba(26, 35, 51, 0.08);
+    margin-bottom: 1rem;
+  }
+  .status {
+    color: var(--navy-soft);
+    font-size: 0.88rem;
+  }
+  .status strong { color: var(--navy); font-weight: 600; }
+  button {
+    background: var(--thopp);
+    color: #fff;
+    border: 0;
+    border-radius: 999px;
+    padding: 0.7rem 1.5rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    transition: background 0.15s, transform 0.1s;
+    box-shadow: 0 4px 14px rgba(45, 181, 160, 0.25);
+  }
+  button:hover:not(:disabled) { background: var(--thopp-dark); transform: translateY(-1px); }
+  button:active:not(:disabled) { transform: translateY(0); }
+  button:disabled { background: #C5CCD5; cursor: not-allowed; box-shadow: none; }
+  button .arrow { font-size: 1.1rem; }
+
+  /* Controls */
+  .controls {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr auto;
+    gap: 1.25rem;
+    align-items: end;
+  }
+  .ctrl-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+    font-weight: 600;
+  }
+  .controls select, .controls .order-btn {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--navy);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .controls select:focus, .controls .order-btn:hover {
+    border-color: var(--thopp);
+    outline: none;
+  }
+  .order-btn {
+    text-align: left;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .slider-row {
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--thopp);
+    cursor: pointer;
+  }
+  .slider-value {
+    min-width: 3.5rem;
+    text-align: right;
+    font-weight: 700;
+    color: var(--thopp-dark);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+  }
+  .reset-btn {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 0.55rem 1rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: none;
+    transition: all 0.15s;
+  }
+  .reset-btn:hover { color: var(--thopp-dark); border-color: var(--thopp); background: var(--thopp-light); }
+  @media (max-width: 720px) {
+    .controls { grid-template-columns: 1fr 1fr; }
+    .controls .control-slider { grid-column: 1 / -1; }
+    .controls .control-reset { grid-column: 1 / -1; }
+  }
+
+  /* Quota */
+  .quota {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--muted);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .quota-item { display: flex; gap: 0.35rem; align-items: center; }
+  .quota-item strong { color: var(--navy); font-weight: 600; }
+  .quota.warn { border-color: var(--warn); background: #FFFBEB; }
+  .quota.warn strong { color: var(--warn); }
+  .quota.danger { border-color: var(--danger); background: #FEF2F2; }
+  .quota.danger strong { color: var(--danger); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--card);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(26, 35, 51, 0.04);
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 0.9rem 1.25rem;
+    text-align: left;
+    vertical-align: middle;
+  }
+  thead {
+    background: var(--thopp-light);
+  }
+  th {
+    color: var(--thopp-dark);
+    font-weight: 700;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #FAFBFC; }
+  .pos {
+    font-weight: 800;
+    font-size: 1rem;
+    width: 3.2rem;
+    color: var(--navy-soft);
+  }
+  .medal {
+    display: inline-flex;
+    width: 1.8rem; height: 1.8rem;
+    align-items: center; justify-content: center;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #fff;
+  }
+  .medal-1 { background: #F59E0B; }
+  .medal-2 { background: #94A3B8; }
+  .medal-3 { background: #B45309; }
+  .nome a {
+    color: var(--navy);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .nome a:hover { color: var(--thopp); }
+  .endereco {
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 0.2rem;
+  }
+  .nota {
+    font-weight: 700;
+    color: var(--gold);
+    white-space: nowrap;
+    font-size: 0.95rem;
+  }
+  .avals {
+    font-weight: 500;
+    color: var(--navy-soft);
+  }
+  .score {
+    display: inline-block;
+    background: var(--thopp);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Empty / error */
+  .empty, .error {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--muted);
+    background: var(--card);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+  }
+  .error { color: var(--danger); background: #FEF2F2; }
+
+  /* Footer */
+  footer {
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.8;
+  }
+  footer code {
+    background: #EEF1F5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+  }
+
+  @media (max-width: 640px) {
+    .hero { padding: 2rem 1rem 5rem; }
+    .endereco { display: none; }
+    th, td { padding: 0.65rem 0.7rem; font-size: 0.85rem; }
+    .toolbar { padding: 1rem; }
+    .quota { gap: 0.8rem; }
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">
+      <img src="/logo-white-scaled.webp" alt="Thopp Elevadores">
+      <span class="brand-tag">Ferramenta Interna</span>
+    </div>
+    <h1>Ranking de <em>Elevadores</em><br>em Belo Horizonte</h1>
+    <p class="sub">Classificação das empresas do setor por média ponderada Bayesiana, com base nas avaliações do Google Maps.</p>
+  </div>
+</header>
+
+<main class="container content">
+  <div class="toolbar">
+    <div class="status" id="status">Carregando…</div>
+    <button id="btn-refresh" disabled>
+      <span>Atualizar agora</span>
+      <span class="arrow">→</span>
+    </button>
+  </div>
+
+  <div class="quota" id="quota">—</div>
+
+  <div class="controls" id="controls" style="display:none">
+    <div class="control-sort">
+      <label class="ctrl-label" for="sort-field">Ordenar por</label>
+      <select id="sort-field">
+        <option value="score_ponderado">Nota Ponderada</option>
+        <option value="nota">Nota</option>
+        <option value="total_avaliacoes">Avaliações</option>
+        <option value="nome">Nome</option>
+      </select>
+    </div>
+    <div class="control-order">
+      <label class="ctrl-label" for="sort-order">Ordem</label>
+      <button type="button" class="order-btn" id="sort-order" data-dir="desc">
+        <span id="order-icon">↓</span>
+        <span id="order-text">Maior → Menor</span>
+      </button>
+    </div>
+    <div class="control-slider">
+      <label class="ctrl-label" for="m-slider">Peso <strong>m</strong> (mediana: <span id="m-default">—</span>)</label>
+      <div class="slider-row">
+        <input type="range" id="m-slider" min="1" max="200" step="1" value="24">
+        <span class="slider-value" id="m-value">m = 24</span>
+      </div>
+    </div>
+    <div class="control-reset">
+      <label class="ctrl-label" style="visibility:hidden">.</label>
+      <button type="button" class="reset-btn" id="reset-btn">Resetar</button>
+    </div>
+  </div>
+
+  <div id="content"><div class="empty">Carregando último resultado…</div></div>
+
+  <footer id="footer"></footer>
+</main>
+
+<script>
+const btn = document.getElementById("btn-refresh");
+const statusEl = document.getElementById("status");
+const contentEl = document.getElementById("content");
+const footerEl = document.getElementById("footer");
+const quotaEl = document.getElementById("quota");
+const controlsEl = document.getElementById("controls");
+const sortFieldEl = document.getElementById("sort-field");
+const sortOrderEl = document.getElementById("sort-order");
+const orderIconEl = document.getElementById("order-icon");
+const orderTextEl = document.getElementById("order-text");
+const mSliderEl = document.getElementById("m-slider");
+const mValueEl = document.getElementById("m-value");
+const mDefaultEl = document.getElementById("m-default");
+const resetBtn = document.getElementById("reset-btn");
+
+let currentData = null;  // último payload recebido do servidor (referência imutável)
+
+function fmtDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+
+function posHtml(p) {
+  if (p === 1) return `<span class="medal medal-1">1</span>`;
+  if (p === 2) return `<span class="medal medal-2">2</span>`;
+  if (p === 3) return `<span class="medal medal-3">3</span>`;
+  return `${p}º`;
+}
+
+function renderCounter(counter) {
+  if (!counter) { quotaEl.textContent = "Contador indisponível."; return; }
+  const { day_used, day_limit, day_remaining, month_used, month_limit, month_remaining } = counter;
+
+  quotaEl.classList.remove("warn", "danger");
+  if (day_remaining === 0 || month_remaining === 0) quotaEl.classList.add("danger");
+  else if (day_remaining <= 5 || month_remaining <= 50) quotaEl.classList.add("warn");
+
+  quotaEl.innerHTML = `
+    <div class="quota-item">Hoje: <strong>${day_used}/${day_limit}</strong> · restam <strong>${day_remaining}</strong></div>
+    <div class="quota-item">Este mês: <strong>${month_used}/${month_limit}</strong> · restam <strong>${month_remaining}</strong></div>
+    <div class="quota-item" style="margin-left:auto">Contador compartilhado · dentro do free tier Google</div>
+  `;
+
+  const blocked = day_remaining === 0 || month_remaining === 0;
+  btn.disabled = blocked;
+  btn.querySelector("span:first-child").textContent = blocked
+    ? (day_remaining === 0 ? "Limite diário atingido" : "Limite mensal atingido")
+    : "Atualizar agora";
+}
+
+function recomputeWithCustomM(ranking, C, m) {
+  return ranking.map(r => {
+    const v = r.total_avaliacoes;
+    const R = r.nota;
+    const score = (v / (v + m)) * R + (m / (v + m)) * C;
+    return { ...r, score_ponderado: Math.round(score * 1000) / 1000 };
+  });
+}
+
+function applyControls(data) {
+  const baseRanking = data.ranking;
+  const C = data.parametros.C_media_geral;
+  const defaultM = data.parametros.m_mediana_avaliacoes;
+
+  const customM = parseFloat(mSliderEl.value);
+  const usingCustomM = Math.abs(customM - defaultM) > 0.01;
+
+  let ranking = usingCustomM ? recomputeWithCustomM(baseRanking, C, customM) : [...baseRanking];
+
+  const field = sortFieldEl.value;
+  const dir = sortOrderEl.dataset.dir === "asc" ? 1 : -1;
+  ranking.sort((a, b) => {
+    const va = a[field], vb = b[field];
+    if (typeof va === "string") return va.localeCompare(vb) * dir;
+    return (va - vb) * dir;
+  });
+  ranking = ranking.map((r, i) => ({ ...r, _posAtual: i + 1 }));
+
+  return { ranking, C, m: customM, usingCustomM, defaultM };
+}
+
+function renderRanking(data) {
+  currentData = data;
+
+  if (!data || !data.ranking || !data.ranking.length) {
+    contentEl.innerHTML = `<div class="empty">Nenhum ranking carregado ainda. Clique em <strong>Atualizar agora</strong>.</div>`;
+    statusEl.textContent = "Sem dados.";
+    controlsEl.style.display = "none";
+    return;
+  }
+
+  controlsEl.style.display = "";
+  mDefaultEl.textContent = data.parametros.m_mediana_avaliacoes;
+  if (mSliderEl.dataset.touched !== "1") {
+    mSliderEl.value = data.parametros.m_mediana_avaliacoes;
+  }
+
+  const { ranking, C, m, usingCustomM, defaultM } = applyControls(data);
+  mValueEl.textContent = `m = ${m % 1 === 0 ? m : m.toFixed(1)}`;
+
+  statusEl.innerHTML = `
+    <strong>${data.total_empresas}</strong> empresas ·
+    <strong>${data.total_avaliacoes.toLocaleString("pt-BR")}</strong> avaliações ·
+    atualizado em <strong>${fmtDate(data.atualizado_em)}</strong>
+  `;
+
+  const rows = ranking.map(r => `
+    <tr>
+      <td class="pos">${posHtml(r._posAtual)}</td>
+      <td class="nome">
+        <a href="${r.maps_url}" target="_blank" rel="noopener">${r.nome}</a>
+        <div class="endereco">${r.endereco || ""}</div>
+      </td>
+      <td class="nota">${r.nota.toFixed(1)} ★</td>
+      <td class="avals">${r.total_avaliacoes.toLocaleString("pt-BR")}</td>
+      <td><span class="score">${r.score_ponderado.toFixed(2)}</span></td>
+    </tr>
+  `).join("");
+
+  contentEl.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Pos.</th>
+            <th>Empresa</th>
+            <th>Nota</th>
+            <th>Avaliações</th>
+            <th>Nota Ponderada</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+
+  const mLabel = usingCustomM
+    ? `<strong>m</strong> = ${m} <span style="color:var(--thopp-dark)">(ajustado manualmente, padrão: ${defaultM})</span>`
+    : `<strong>m</strong> (mediana aval.) = ${defaultM}`;
+  footerEl.innerHTML = `Metodologia: Média Bayesiana — <code>NP = (v/(v+m))·R + (m/(v+m))·C</code> · <strong>C</strong> (média geral) = ${C.toFixed(2)} · ${mLabel}`;
+}
+
+async function loadInitial() {
+  try {
+    const resp = await fetch("/api/state", { cache: "no-store" });
+    const data = await resp.json();
+    renderCounter(data.counter);
+    if (data.last_ranking) {
+      renderRanking(data.last_ranking);
+    } else {
+      contentEl.innerHTML = `<div class="empty">Nenhum ranking carregado ainda.<br>Clique em <strong>Atualizar agora</strong> pra buscar.</div>`;
+      statusEl.textContent = "Sem dados ainda.";
+    }
+  } catch (e) {
+    statusEl.textContent = "Falha ao carregar estado.";
+    contentEl.innerHTML = `<div class="error">Erro: ${e.message}</div>`;
+  }
+}
+
+async function refresh() {
+  btn.disabled = true;
+  btn.querySelector("span:first-child").textContent = "Atualizando…";
+  statusEl.textContent = "Buscando dados do Google Maps…";
+
+  try {
+    const resp = await fetch("/api/ranking", { cache: "no-store" });
+    const data = await resp.json();
+    if (!resp.ok) {
+      renderCounter(data.counter);
+      throw new Error(data.error || `HTTP ${resp.status}`);
+    }
+    renderCounter(data.counter);
+    renderRanking(data);
+  } catch (e) {
+    statusEl.textContent = e.message;
+  }
+}
+
+btn.addEventListener("click", refresh);
+
+sortFieldEl.addEventListener("change", () => { if (currentData) renderRanking(currentData); });
+sortOrderEl.addEventListener("click", () => {
+  const curr = sortOrderEl.dataset.dir;
+  const next = curr === "desc" ? "asc" : "desc";
+  sortOrderEl.dataset.dir = next;
+  orderIconEl.textContent = next === "desc" ? "↓" : "↑";
+  orderTextEl.textContent = next === "desc" ? "Maior → Menor" : "Menor → Maior";
+  if (currentData) renderRanking(currentData);
+});
+mSliderEl.addEventListener("input", () => {
+  mSliderEl.dataset.touched = "1";
+  if (currentData) renderRanking(currentData);
+});
+resetBtn.addEventListener("click", () => {
+  sortFieldEl.value = "score_ponderado";
+  sortOrderEl.dataset.dir = "desc";
+  orderIconEl.textContent = "↓";
+  orderTextEl.textContent = "Maior → Menor";
+  mSliderEl.dataset.touched = "";
+  if (currentData) {
+    mSliderEl.value = currentData.parametros.m_mediana_avaliacoes;
+    renderRanking(currentData);
+  }
+});
+
+loadInitial();
+</script>
+</body>
+</html>

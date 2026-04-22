@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/ranking.py": {
+      "maxDuration": 10
+    }
+  }
+}
