@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 
 import _store
 
@@ -133,7 +133,23 @@ def build_counter(day_used: int, month_used: int) -> dict:
     }
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 app = Flask(__name__)
+
+
+@app.route("/")
+def home():
+    return send_from_directory(str(PROJECT_ROOT), "index.html")
+
+
+@app.route("/<path:filename>")
+def static_file(filename):
+    if filename.startswith("api/"):
+        return "", 404
+    if (PROJECT_ROOT / filename).is_file():
+        return send_from_directory(str(PROJECT_ROOT), filename)
+    return "", 404
 
 
 @app.route("/api/state")

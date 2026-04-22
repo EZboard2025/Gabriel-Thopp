@@ -1,5 +1,5 @@
-"""Servidor local de dev — roda o Flask app (api/index.py) + serve arquivos estáticos.
-Em produção, a Vercel serve os estáticos direto; aqui a gente precisa de uma rota extra."""
+"""Servidor local de dev — roda o Flask app (api/index.py) que já lida com static files.
+Uso: python3 dev.py (lê .env.local automaticamente)"""
 
 import os
 import sys
@@ -17,21 +17,7 @@ if env_file.exists():
         k, v = line.split("=", 1)
         os.environ.setdefault(k.strip(), v.strip())
 
-from flask import send_from_directory
 from index import app
-
-
-@app.route("/")
-def _dev_home():
-    return send_from_directory(str(ROOT), "index.html")
-
-
-@app.route("/<path:filename>")
-def _dev_static(filename):
-    if filename.startswith("api/"):
-        return "", 404
-    return send_from_directory(str(ROOT), filename)
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
