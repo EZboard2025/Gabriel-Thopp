@@ -558,17 +558,21 @@ async function refresh() {
   btn.querySelector("span:first-child").textContent = "Atualizando…";
   statusEl.textContent = "Buscando dados do Google Maps…";
 
+  let ok = false;
   try {
     const resp = await fetch("/api/ranking", { cache: "no-store" });
     const data = await resp.json();
-    if (!resp.ok) {
-      renderCounter(data.counter);
-      throw new Error(data.error || `HTTP ${resp.status}`);
-    }
-    renderCounter(data.counter);
+    if (data.counter) renderCounter(data.counter);
+    if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
     renderRanking(data);
+    ok = true;
   } catch (e) {
-    statusEl.textContent = e.message;
+    statusEl.textContent = "Erro: " + e.message;
+  } finally {
+    if (!ok) {
+      btn.disabled = false;
+      btn.querySelector("span:first-child").textContent = "Atualizar agora";
+    }
   }
 }
 
