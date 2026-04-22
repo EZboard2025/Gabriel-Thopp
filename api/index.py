@@ -1,4 +1,8 @@
-from http.server import BaseHTTPRequestHandler
+"""Entrypoint único do backend — Flask app servido pelo Vercel.
+Exporta `app` (WSGI) com duas rotas: /api/state (leitura) e /api/ranking (fetch + incr)."""
+
+from __future__ import annotations
+
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -7,10 +11,12 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+from flask import Flask, jsonify, send_from_directory
+from pathlib import Path
+
 import _store
 
 SEARCH_QUERIES = [
-    # Queries genéricas
     "empresas de elevadores Belo Horizonte",
     "manutenção de elevadores Belo Horizonte",
     "instalação de elevadores Belo Horizonte",
@@ -19,7 +25,6 @@ SEARCH_QUERIES = [
     "conserto de elevadores Belo Horizonte",
     "reparo de elevadores BH",
     "fabricante de elevadores MG",
-    # Queries de marca (capturam multinacionais e legacy que não vêm nas genéricas)
     "Atlas Schindler Belo Horizonte",
     "Otis Elevadores Belo Horizonte",
     "TKE Thyssenkrupp Belo Horizonte",
@@ -33,24 +38,8 @@ TEXT_SEARCH_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 
 LIMIT_DAY = 30
 LIMIT_MONTH = 900
-DAY_TTL = 60 * 60 * 36         # 36h
-MONTH_TTL = 60 * 60 * 24 * 40  # 40d
-
-
-def text_search(query: str, api_key: str) -> list:
-    """Text Search uma página (até 20 resultados). Sem pagination pra caber em timeout serverless."""
-    params = {"query": query, "key": api_key, "region": "br", "language": "pt-BR"}
-    try:
-        with urlopen(f"{TEXT_SEARCH_URL}?{urlencode(params)}", timeout=6) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except Exception as e:
-        print(f"query falhou '{query}': {e}")
-        return []
-    if data.get("status") not in ("OK", "ZERO_RESULTS"):
-        print(f"query '{query}' retornou {data.get('status')}")
-        return []
-    return data.get("results", [])
-
+DAY_TTL = 60 * 60 * 36
+MONTH_TTL = 60 * 60 * 24 * 40
 
 REGIAO_BH = (
     "Belo Horizonte", "Contagem", "Nova Lima", "Betim",
@@ -65,8 +54,21 @@ def na_regiao_bh(endereco: str) -> bool:
     return any(cidade in endereco for cidade in REGIAO_BH)
 
 
+def text_search(query: str, api_key: str) -> list:
+    params = {"query": query, "key": api_key, "region": "br", "language": "pt-BR"}
+    try:
+        with urlopen(f"{TEXT_SEARCH_URL}?{urlencode(params)}", timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"query falhou '{query}': {e}")
+        return []
+    if data.get("status") not in ("OK", "ZERO_RESULTS"):
+        print(f"query '{query}' retornou {data.get('status')}")
+        return []
+    return data.get("results", [])
+
+
 def fetch_all_companies(api_key: str) -> list:
-    """Dispara todas as queries em paralelo e deduplica por place_id."""
     by_id: dict = {}
     with ThreadPoolExecutor(max_workers=len(SEARCH_QUERIES)) as pool:
         results = list(pool.map(lambda q: text_search(q, api_key), SEARCH_QUERIES))
@@ -82,17 +84,12 @@ def fetch_all_companies(api_key: str) -> list:
 
 
 def compute_ranking(companies: list) -> dict:
-    """Ranking por Média Bayesiana:
-        NP = (v / (v + m)) * R + (m / (v + m)) * C
-       onde C = média geral ponderada pelo volume; m = mediana de avaliações."""
     rated = [c for c in companies if c.get("rating") is not None and c.get("user_ratings_total")]
     if not rated:
         return {"ranking": [], "C": 0.0, "m": 0.0, "total_avaliacoes": 0}
-
     total_reviews = sum(c["user_ratings_total"] for c in rated)
     C = sum(c["rating"] * c["user_ratings_total"] for c in rated) / total_reviews
     m = statistics.median([c["user_ratings_total"] for c in rated])
-
     out = []
     for c in rated:
         v = c["user_ratings_total"]
@@ -113,7 +110,7 @@ def compute_ranking(companies: list) -> dict:
     return {"ranking": out, "C": round(C, 2), "m": m, "total_avaliacoes": total_reviews}
 
 
-def read_counters() -> tuple[int, int]:
+def read_counters():
     day_key, month_key = _store.now_keys()
     d = _store.get(day_key)
     m = _store.get(month_key)
@@ -131,60 +128,65 @@ def build_counter(day_used: int, month_used: int) -> dict:
     }
 
 
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
-        if not api_key:
-            self._json(500, {"error": "GOOGLE_MAPS_API_KEY não configurado"})
-            return
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+app = Flask(__name__, static_folder=str(PROJECT_ROOT), static_url_path="")
 
-        day_used, month_used = read_counters()
 
-        if day_used >= LIMIT_DAY:
-            self._json(429, {
-                "error": f"Limite diário de {LIMIT_DAY} atualizações atingido. Tenta amanhã.",
-                "counter": build_counter(day_used, month_used),
-            })
-            return
-        if month_used >= LIMIT_MONTH:
-            self._json(429, {
-                "error": f"Limite mensal de {LIMIT_MONTH} atualizações atingido. Reseta no dia 1.",
-                "counter": build_counter(day_used, month_used),
-            })
-            return
+@app.route("/")
+def home():
+    return send_from_directory(str(PROJECT_ROOT), "index.html")
 
-        try:
-            companies = fetch_all_companies(api_key)
-            result = compute_ranking(companies)
-        except Exception as e:
-            self._json(500, {"error": str(e)})
-            return
 
-        day_key, month_key = _store.now_keys()
-        new_day = _store.incr(day_key, ttl_seconds=DAY_TTL)
-        new_month = _store.incr(month_key, ttl_seconds=MONTH_TTL)
+@app.route("/api/state")
+def api_state():
+    day_used, month_used = read_counters()
+    last = _store.get("last-ranking")
+    return jsonify({
+        "counter": build_counter(day_used, month_used),
+        "last_ranking": last,
+    })
 
-        payload = {
-            "atualizado_em": datetime.now(timezone.utc).isoformat(),
-            "total_empresas": len(result["ranking"]),
-            "total_avaliacoes": result["total_avaliacoes"],
-            "ranking": result["ranking"],
-            "parametros": {
-                "fonte": "Google Places API (Text Search)",
-                "formula": "NP = (v/(v+m))·R + (m/(v+m))·C",
-                "C_media_geral": result["C"],
-                "m_mediana_avaliacoes": result["m"],
-                "queries": SEARCH_QUERIES,
-            },
-        }
-        _store.set("last-ranking", payload)
 
-        self._json(200, {**payload, "counter": build_counter(new_day, new_month)})
+@app.route("/api/ranking")
+def api_ranking():
+    api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+    if not api_key:
+        return jsonify({"error": "GOOGLE_MAPS_API_KEY não configurado"}), 500
 
-    def _json(self, status: int, body: dict) -> None:
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(json.dumps(body, ensure_ascii=False).encode("utf-8"))
+    day_used, month_used = read_counters()
+    if day_used >= LIMIT_DAY:
+        return jsonify({
+            "error": f"Limite diário de {LIMIT_DAY} atualizações atingido. Tenta amanhã.",
+            "counter": build_counter(day_used, month_used),
+        }), 429
+    if month_used >= LIMIT_MONTH:
+        return jsonify({
+            "error": f"Limite mensal de {LIMIT_MONTH} atualizações atingido. Reseta no dia 1.",
+            "counter": build_counter(day_used, month_used),
+        }), 429
+
+    try:
+        companies = fetch_all_companies(api_key)
+        result = compute_ranking(companies)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    day_key, month_key = _store.now_keys()
+    new_day = _store.incr(day_key, ttl_seconds=DAY_TTL)
+    new_month = _store.incr(month_key, ttl_seconds=MONTH_TTL)
+
+    payload = {
+        "atualizado_em": datetime.now(timezone.utc).isoformat(),
+        "total_empresas": len(result["ranking"]),
+        "total_avaliacoes": result["total_avaliacoes"],
+        "ranking": result["ranking"],
+        "parametros": {
+            "fonte": "Google Places API (Text Search)",
+            "formula": "NP = (v/(v+m))·R + (m/(v+m))·C",
+            "C_media_geral": result["C"],
+            "m_mediana_avaliacoes": result["m"],
+            "queries": SEARCH_QUERIES,
+        },
+    }
+    _store.set("last-ranking", payload)
+    return jsonify({**payload, "counter": build_counter(new_day, new_month)})
