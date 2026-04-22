@@ -3,6 +3,12 @@ Exporta `app` (WSGI) com duas rotas: /api/state (leitura) e /api/ranking (fetch 
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Garante que o diretório do próprio arquivo está no sys.path (pra achar _store em qualquer runtime)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -11,8 +17,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from flask import Flask, jsonify, send_from_directory
-from pathlib import Path
+from flask import Flask, jsonify
 
 import _store
 
@@ -128,13 +133,7 @@ def build_counter(day_used: int, month_used: int) -> dict:
     }
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-app = Flask(__name__, static_folder=str(PROJECT_ROOT), static_url_path="")
-
-
-@app.route("/")
-def home():
-    return send_from_directory(str(PROJECT_ROOT), "index.html")
+app = Flask(__name__)
 
 
 @app.route("/api/state")
